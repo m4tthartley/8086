@@ -30,15 +30,53 @@
 #define OPCODE_MOV			0b10001000
 #define OPCODE_MOV_IM_RM	0b11000110
 #define OPCODE_MOV_IM		0b10110000
-#define OPCODE_MOV_MEM_ACC	0b10100000
-#define OPCODE_MOV_ACC_MEM	0b10100010
+#define OPCODE_MOV_MEM_TO_ACC	0b10100000
+#define OPCODE_MOV_ACC_TO_MEM	0b10100010
 #define OPCODE_MOV_RM_SEG	0b10001110
 #define OPCODE_MOV_SEG_RM	0b10001100
 
 // typedef union {
 // 	u16
 // } register_t;
-u16 registers[8] = {0};
+// This is so you can use index -1 to get zero
+// And it's 16 instead of just 9 to keep it aligned nicely
+u16 registers_raw[16] = {
+	// padding
+	0, 0, 0, 0, 0, 0, 0, 0,
+	// registers
+	0, 0, 0, 0, 0, 0, 0, 0,
+};
+u16* registers = registers_raw + 8;
+
+#define ax 0
+#define cx 1
+#define dx 2
+#define bx 3
+#define sp 4
+#define bp 5
+#define si 6
+#define di 7
+
+int rm_table[] = {
+	bx,
+	bx,
+	bp,
+	bp,
+	si,
+	di,
+	bp,
+	bx
+};
+int rm_plus_table[] = {
+	si,
+	di,
+	si,
+	di,
+	-1,
+	-1,
+	-1,
+	-1,
+};
 
 char* register_names[] = {
 	"ax",
@@ -61,15 +99,6 @@ char* register_names[] = {
 };
 
 #define get_register_name(reg, wide) (register_names[(wide ? 0 : 8) + reg])
-
-#define ax 0
-#define cx 1
-#define dx 2
-#define bx 3
-#define sp 4
-#define bp 5
-#define si 6
-#define di 7
 
 typedef struct {
 	u8* instructions;
@@ -94,6 +123,7 @@ void run_program(program_t program) {
 	while (ip < program.instructions+program.size) {
 		u8 opcode = *ip++;
 
+		// Immediate the register
 		if ((opcode & 0b11110000) == OPCODE_MOV_IM) {
 			u8 wide = (opcode & 0b1000) >> 3;
 			u8 reg = opcode & 0b111;
@@ -110,6 +140,7 @@ void run_program(program_t program) {
 			continue;
 		}
 
+		// Register/memory to/from register
 		if ((opcode & 0b11111100) == OPCODE_MOV) {
 			u8 reg_code = *ip++;
 			b32 dest = (opcode&D_MASK) >> 1;
@@ -120,156 +151,160 @@ void run_program(program_t program) {
 			u8 fields[] = {reg, rm};
 			u8 regdst = fields[1-dest];
 			u8 regsrc = fields[dest];
-			// if (swap) {
-			// 	rm += reg;
-			// 	reg = rm - reg;
-			// 	rm -= reg;
-			// }
-			// char* dest_reg = register_names[(wide ? 0 : 8) + reg2];
-			// char* src_reg = register_names[(wide ? 0 : 8) + reg1];
+			
 			if (mode == 0b11) {
 				core_print_inline("mov ");
 				core_print_inline(get_register_name(regdst, wide));
 				core_print_inline(", %s \n", get_register_name(regsrc, wide));
 			} else  {
-				int reg_table[] = {
-					bx,
-					bx,
-					bp,
-					bp,
-					si,
-					di,
-					bp,
-					bx
-				};
-				int reg_plus_table[] = {
-					si,
-					di,
-					si,
-					di,
-					-1,
-					-1,
-					-1,
-					-1,
-				};
-
 				if (mode == 0 && rm == 0b110) {
 					// direct address
-					core_error("unrecognised opcode");
-					exit(1);
+					// core_error("OPCODE_MOV direct address");
+					// exit(1);
+					i16 disp16 = *(i16*)ip;
+					ip += 2;
+
+					if (dest) {
+						core_print_inline("mov ");
+						core_print_inline(get_register_name(reg, wide));
+						core_print_inline(", [%hu]", disp16);
+						core_print_inline("\n");
+					} else {
+						core_print_inline("mov ");
+						core_print_inline("[%hu], ", disp16);
+						core_print_inline(get_register_name(reg, wide));
+						core_print_inline("\n");
+					}
 				} else {
-					u8 data8 = *ip;
-					u16 data16 = *(u16*)ip;
+					i8 disp8 = *ip;
+					i16 disp16 = *(i16*)ip;
 					ip += mode;
 
 					core_print_inline("mov ");
 					if (dest) {
 						core_print_inline(get_register_name(reg, wide));
-						core_print_inline(", [%s", register_names[reg_table[rm]]);
+						core_print_inline(", [%s", register_names[rm_table[rm]]);
 						if (rm < 4) {
-							core_print_inline(" + %s", register_names[reg_plus_table[rm]]);
+							core_print_inline(" + %s", register_names[rm_plus_table[rm]]);
 						}
 						if (mode == 0b01) {
-							core_print_inline(" + %hhu", data8);
+							core_print_inline(" + %hhi", disp8);
 						}
 						if (mode == 0b10) {
-							core_print_inline(" + %hu", data16);
+							core_print_inline(" + %hi", disp16);
 						}
 						core_print_inline("]");
 						core_print_inline("\n");
 					} else {
-						core_print_inline("[%s", register_names[reg_table[rm]]);
+						core_print_inline("[%s", register_names[rm_table[rm]]);
 						if (rm < 4) {
-							core_print_inline(" + %s", register_names[reg_plus_table[rm]]);
+							core_print_inline(" + %s", register_names[rm_plus_table[rm]]);
 						}
 						if (mode == 0b01) {
-							core_print_inline(" + %hhu", data8);
+							core_print_inline(" + %hhi", disp8);
 						}
 						if (mode == 0b10) {
-							core_print_inline(" + %hu", data16);
+							core_print_inline(" + %hi", disp16);
 						}
 						core_print_inline("], ");
 						core_print_inline(get_register_name(reg, wide));
 						core_print_inline("\n");
 					}
-					
-					// switch (mode) {
-					// case 0b00:
-					// 	core_print_inline("mov ");
-					// 	if (dest) {
-					// 		core_print_inline(get_register_name(reg, wide));
-					// 		core_print_inline(", [%s", register_names[reg_table[rm]]);
-					// 		if (rm < 4) {
-					// 			core_print_inline(" + %s", register_names[reg_plus_table[rm]]);
-					// 		}
-					// 		core_print_inline("]");
-					// 		core_print_inline("\n");
-					// 	} else {
-					// 		core_print_inline("[%s", register_names[reg_table[rm]]);
-					// 		if (rm < 4) {
-					// 			core_print_inline(" + %s", register_names[reg_plus_table[rm]]);
-					// 		}
-					// 		core_print_inline("], ");
-					// 		core_print_inline(get_register_name(reg, wide));
-					// 		core_print_inline("\n");
-					// 	}
-					// 	break;
-					// case 0b01:
-					// 	u8 data8 = *ip++;
-					// 	core_print_inline("mov %s, [%s",
-					// 		get_register_name(reg, wide),
-					// 		register_names[reg_table[rm]]);
-					// 		if (rm < 4) {
-					// 			core_print_inline(" + %s", register_names[reg_plus_table[rm]]);
-					// 		}
-					// 		core_print(" + %hhu]", data8);
-					// 		// reg_plus_table[rm]>0 ? register_names[reg_plus_table[rm]] : "_",
-					// 		// data8);
-					// 	break;
-					// case 0b10:
-					// 	u16 data16 = *(u16*)ip;
-					// 	ip += 2;
-					// 	core_print_inline("mov %s, [%s",
-					// 		get_register_name(reg, wide),
-					// 		register_names[reg_table[rm]]);
-					// 		if (rm < 4) {
-					// 			core_print_inline(" + %s", register_names[reg_plus_table[rm]]);
-					// 		}
-					// 		core_print(" + %hu]", data16);
-					// 	break;
-					// }
-
-					// switch (reg2) {
-					// case 0b000:
-					// 	core_print("mov %s, [bx + si]", dest_reg);
-					// 	break;
-					// case 0b001:
-					// 	core_print("mov %s, [bx + di]", dest_reg);
-					// 	break;
-					// case 0b010:
-					// 	core_print("mov %s, [bp + si]", dest_reg);
-					// 	break;
-					// case 0b011:
-					// 	core_print("mov %s, [bp + di]", dest_reg);
-					// 	break;
-					// case 0b100:
-					// 	core_print("mov %s, [si]", dest_reg);
-					// 	break;
-					// case 0b101:
-					// 	core_print("mov %s, [di]", dest_reg);
-					// 	break;
-					// case 0b111:
-					// 	core_print("mov %s, [bx]", dest_reg);
-					// 	break;
-					// }
 				}
 			}
-			// if (mode == 0b01) {
+			continue;
+		}
 
-			// }
-			// if (mode == 0b10) {
+		// Immediate to register/memory
+		if ((opcode & 0b11111110) == OPCODE_MOV_IM_RM) {
+			u8 reg_code = *ip++;
+			b32 wide = 	opcode&W_MASK;
+			u8 mode = 	(reg_code&0b11000000) >> 6;
+			// u8 reg = 	(reg_code&0b00111000) >> 3;
+			u8 rm = 	(reg_code&0b00000111);
+			// u8 fields[] = {reg, rm};
+			// u8 regdst = fields[1-dest];
+			// u8 regsrc = fields[dest];
 
-			// }
+			if (mode == 0b11) {
+				i8 data8 = *ip;
+				i16 data16 = *(i16*)ip;
+				ip += 1+wide;
+				core_print_inline("mov ");
+				core_print_inline("%s,  \n", get_register_name(rm, wide));
+				if (wide) {
+					core_print_inline("word %hi", data16);
+				} else {
+					core_print_inline("byte %hhi", data8);
+				}
+			} else {
+				i8 disp8 = *ip;
+				i16 disp16 = *(i16*)ip;
+				ip += mode;
+
+				i8 data8 = *ip;
+				i16 data16 = *(i16*)ip;
+				ip += 1+wide;
+
+				if (mode == 0 && rm == 0b110) {
+					// direct address
+					core_error("OPCODE_MOV_IM_RM direct address");
+					exit(1);
+				} else {
+					core_print_inline("mov ");
+					core_print_inline("[%s", register_names[rm_table[rm]]);
+					if (rm < 4) {
+						core_print_inline(" + %s", register_names[rm_plus_table[rm]]);
+					}
+					if (mode == 0b01) {
+						core_print_inline(" + %hhi", disp8);
+					}
+					if (mode == 0b10) {
+						core_print_inline(" + %hi", disp16);
+					}
+					core_print_inline("]");
+					if (wide) {
+						core_print_inline(", word %hi", data16);
+					} else {
+						core_print_inline(", byte %hhi", data8);
+					}
+					core_print_inline("\n");
+				}
+			}
+			continue;
+		}
+
+		if ((opcode & 0b11111110) == OPCODE_MOV_MEM_TO_ACC) {
+			b32 wide = 	opcode&W_MASK;
+			i16 disp16 = *(i16*)ip;
+			ip += 2;
+
+			core_print_inline("mov ");
+			if (wide) {
+				core_print_inline("ax");
+			} else {
+				core_print_inline("al");
+			}
+			core_print_inline(", [%hi]", disp16);
+			core_print_inline("\n");
+
+			continue;
+		}
+
+		if ((opcode & 0b11111110) == OPCODE_MOV_ACC_TO_MEM) {
+			b32 wide = 	opcode&W_MASK;
+			i16 disp16 = *(i16*)ip;
+			ip += 2;
+
+			core_print_inline("mov ");
+			core_print_inline("[%hi], ", disp16);
+			if (wide) {
+				core_print_inline("ax");
+			} else {
+				core_print_inline("al");
+			}
+			core_print_inline("\n");
+
 			continue;
 		}
 
@@ -288,7 +323,7 @@ int main() {
 	// core_print("single program");
 	// run_program(single);
 
-	run_program(lesson2part1);
+	run_program(lesson2part2);
 
 	int x = 0;
 }
