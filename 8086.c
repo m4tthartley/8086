@@ -49,6 +49,76 @@
 #define OPCODE_CMP_IM_TO_RM		0b10000000
 #define OPCODE_CMP_IM_TO_ACC	0b00111100
 
+#define OPCODE_JNZ				0b01110101
+#define OPCODE_JE				0b01110100
+#define OPCODE_JL				0b01111100
+#define OPCODE_JLE				0b01111110
+#define OPCODE_JB				0b01110010
+#define OPCODE_JBE				0b01110110
+#define OPCODE_JP				0b01111010
+#define OPCODE_JO				0b01110000
+#define OPCODE_JS				0b01111000
+// #define OPCODE_JNE				0b01110101
+#define OPCODE_JNL				0b01111101
+#define OPCODE_JG				0b01111111
+#define OPCODE_JNB				0b01110011
+#define OPCODE_JA				0b01110111
+#define OPCODE_JNP				0b01111011
+#define OPCODE_JNO				0b01110001
+#define OPCODE_JNS				0b01111001
+#define OPCODE_LOOP				0b11100010
+#define OPCODE_LOOPZ			0b11100001
+#define OPCODE_LOOPNZ			0b11100000
+#define OPCODE_JCXZ				0b11100011
+
+u8 jumps8[] = {
+	OPCODE_JNZ,
+	OPCODE_JE,
+	OPCODE_JL,
+	OPCODE_JLE,
+	OPCODE_JB,
+	OPCODE_JBE,
+	OPCODE_JP,
+	OPCODE_JO,
+	OPCODE_JS,
+	// OPCODE_JNE,
+	OPCODE_JNL,
+	OPCODE_JG,
+	OPCODE_JNB,
+	OPCODE_JA,
+	OPCODE_JNP,
+	OPCODE_JNO,
+	OPCODE_JNS,
+	OPCODE_LOOP,
+	OPCODE_LOOPZ,
+	OPCODE_LOOPNZ,
+	OPCODE_JCXZ,
+};
+
+char* jumps8_str[] = {
+	"jnz",
+	"je",
+	"jl",
+	"jle",
+	"jb",
+	"jbe",
+	"jp",
+	"jo",
+	"js",
+	// "jne",
+	"jnl",
+	"jg",
+	"jnb",
+	"ja",
+	"jnp",
+	"jno",
+	"jns",
+	"loop",
+	"loopz",
+	"loopnz",
+	"jcxz",
+};
+
 // typedef union {
 // 	u16
 // } register_t;
@@ -438,8 +508,39 @@ void run_program(program_t program) {
 			continue;
 		}
 
+		// if (opcode == OPCODE_JNZ) {
+		// 	i8 data8 = *ip++;
+		// 	core_print("jnz %hhi", data8);
+		// 	continue;
+		// }
+		// if (opcode == OPCODE_JE) {
+		// 	i8 data8 = *ip++;
+		// 	core_print("je %hhi", data8);
+		// 	continue;
+		// }
+		// if (opcode == OPCODE_JL) {
+		// 	i8 data8 = *ip++;
+		// 	core_print("jl %hhi", data8);
+		// 	continue;
+		// }
+		// if (opcode == OPCODE_JLE) {
+		// 	i8 data8 = *ip++;
+		// 	core_print("jle %hhi", data8);
+		// 	continue;
+		// }
+
+		FOR (i, array_size(jumps8)) {
+			if (opcode == jumps8[i]) {
+				i8 data8 = *ip++;
+				core_print("%s %hhi", jumps8_str[i], data8);
+				goto next;
+			}
+		}
+
 		core_error("unrecognised opcode");
 		exit(1);
+next:
+		continue;
 	}
 }
 
