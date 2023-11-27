@@ -6,8 +6,6 @@
 //  Copyright 2023 GiantJelly. All rights reserved.
 //
 
-#include <core/core.h>
-
 /*
 	Instruction encodings
 
@@ -20,6 +18,9 @@
 	[1011 W REG] [LOW DISP] [HIGH DISP] [LOW DATA] [HIGH DATA]
 */
 
+#include "8086def.h"
+
+#if 0
 #define OPCODE_MASK 0b11111100
 #define D_MASK 0b00000010
 #define S_MASK 0b00000010
@@ -183,25 +184,6 @@ char* register_names[] = {
 };
 
 #define get_register_name(reg, wide) (register_names[(wide ? 0 : 8) + reg])
-
-typedef struct {
-	u8* instructions;
-	int size;
-} program_t;
-
-program_t load_program(char* path) {
-	program_t result = {0};
-	core_handle_t file = core_open(path);
-	if (file) {
-		core_stat_t stat = core_stat(file);
-		u8* data = malloc(stat.size);
-		core_read(file, 0, data, stat.size);
-		core_close(file);
-		result.instructions = data;
-		result.size = stat.size;
-	}
-	return result;
-}
 
 // char* get_rm_string(u8 opcode, u8 reg_code, u8 rm) {
 // #define get_rm_string(rm) \
@@ -543,8 +525,27 @@ next:
 		continue;
 	}
 }
+#endif
+
+program_t load_program(char* path) {
+	program_t result = {0};
+	core_handle_t file = core_open(path);
+	if (file) {
+		core_stat_t stat = core_stat(file);
+		u8* data = malloc(stat.size);
+		core_read(file, 0, data, stat.size);
+		core_close(file);
+		result.instructions = data;
+		result.size = stat.size;
+	}
+	return result;
+}
 
 int main() {
+	char buffer[1024];
+	core_allocator_t allocator = core_allocator(buffer, sizeof(buffer));
+	core_use_allocator(&allocator);
+
 	program_t single = load_program("data/listing_0037_single_register_mov");
 	program_t many = load_program("data/listing_0038_many_register_mov");
 
@@ -556,11 +557,16 @@ int main() {
 	// core_print("single program");
 	// run_program(single);
 
+#if 0
 	run_program(lesson2part1);
 	core_print("---- ---- ---- ---- ---- ---- ---- ----");
 	run_program(lesson2part2);
 	core_print("---- ---- ---- ---- ---- ---- ---- ----");
 	run_program(lesson3);
+#endif
+
+	decode_program(single);
+	decode_program(many);
 
 	int x = 0;
 }

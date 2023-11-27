@@ -12,4 +12,4 @@ core=$USERPROFILE/code/core/core
 
 include=$USERPROFILE/code/core
 warnings="-Wno-incompatible-pointer-types"
-gcc 8086.c -o build/8086.exe $core/core.c -I$include $warnings -g
+gcc 8086.c display.c decode.c decode_format.c -o build/8086.exe $core/core.c -I$include $warnings -g
