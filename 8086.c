@@ -565,8 +565,14 @@ int main() {
 	run_program(lesson3);
 #endif
 
-	decode_program(single);
-	decode_program(many);
+	// core_print("\nsingle mov");
+	// decode_program(single);
+
+	// core_print("\nmany movs");
+	// decode_program(many);
+
+	core_print("\nmore movs");
+	decode_program(lesson2part1);
 
 	int x = 0;
 }

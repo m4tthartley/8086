@@ -23,7 +23,7 @@ typedef enum {
 	BITS_WDATA,
 
 	BITS_END,
-} __attribute__ ((__packed__)) instruction_field_type_t;
+} /*__attribute__ ((__packed__))*/ instruction_field_type_t;
 
 typedef struct {
 	instruction_field_type_t type;
@@ -49,3 +49,5 @@ typedef struct {
 
 
 void decode_program(program_t program);
+
+void display_instruction(instruction_t inst);

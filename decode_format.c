@@ -38,3 +38,4 @@ instruction_format_t instruction_formats[] = {
 	INSTRUCTION(mov, {BITS(10001110), MOD, BITS(0), SR, RM, DISP16, DEFAULT_D(1), DEFAULT_W(1)})
 	INSTRUCTION(mov, {BITS(10001100), MOD, BITS(0), SR, RM, DISP16, DEFAULT_D(0), DEFAULT_W(1)})
 };
+int instruction_format_count = array_size(instruction_formats);
