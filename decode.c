@@ -13,6 +13,9 @@ extern int instruction_format_count;
 
 instruction_t decode_instruction(u8* ip) {
 	instruction_t instruction = {0};
+	u16 fields[16];
+	assert(array_size(fields) > FIELD_COUNT);
+
 	FOR (format_index, instruction_format_count) {
 		instruction_format_t* format = instruction_formats + format_index;
 		u8 bit_index = 0;
@@ -27,7 +30,7 @@ instruction_t decode_instruction(u8* ip) {
 
 			b32 next = FALSE;
 			switch (field.type) {
-			case BITS_NULL:
+			case FIELD_NULL:
 				// we reached the end
 				// return instruction
 				// core_print("format %i", format_index);
@@ -37,7 +40,7 @@ instruction_t decode_instruction(u8* ip) {
 				goto done;
 				break;
 
-			case BITS_LITERAL:
+			case FIELD_LITERAL:
 				assert(field.size <= (8-bit_offset));
 				// for (int i = field.size; i >= 0; --i) {
 				//     u8 bit = (0b1 << (8-bit_offset-1))
@@ -48,13 +51,17 @@ instruction_t decode_instruction(u8* ip) {
 				}
 				break;
 
-			case BITS_WDATA:
-				if (!instruction.fields[BITS_W]) {
+			case FIELD_DATA_IF_W:
+				if (!fields[FIELD_W]) {
 					continue;
 				}
 
 			default:
-				instruction.fields[field.type] = value;
+				if (!field.size) {
+					fields[field.type] = field.value;
+				} else {
+					fields[field.type] = value;
+				}
 			}
 
 			if (next) {
@@ -66,12 +73,50 @@ instruction_t decode_instruction(u8* ip) {
 	}
 
 done:
+	instruction.wide = fields[FIELD_W];
+
+	operand_t* reg = &instruction.operands[1 - fields[FIELD_D]];
+	operand_t* rm = &instruction.operands[fields[FIELD_D]];
+	operand_t* im = &instruction.operands[1];
+
+	reg->reg = fields[FIELD_REG];
+	rm->reg = fields[FIELD_RM];
+
+	if (fields[FIELD_MOD] == 0 && fields[FIELD_RM] == 0b110) {
+		// Direct address
+		rm->disp = *(u16*)(ip+instruction.size);
+		instruction.size += 2;
+		rm->type = OPERAND_DIRECT_ADDRESS;
+	}
+
+	if (fields[FIELD_MOD] == 0b01) {
+		rm->disp = *(ip+instruction.size);
+		instruction.size += 1;
+		rm->type = OPERAND_MEMORY;
+	}
+
+	if (fields[FIELD_MOD] == 0b10) {
+		rm->disp = *(u16*)(ip+instruction.size);
+		instruction.size += 2;
+		rm->type = OPERAND_MEMORY;
+	}
+
+	if (fields[FIELD_DATA]) {
+		// Immediate
+		im->data = ip[instruction.size];
+		++instruction.size;
+		if(fields[FIELD_DATA_IF_W]) {
+			im->data |= ((u16)ip[instruction.size] << 8);
+			++instruction.size;
+		}
+		im->type = OPERAND_IMMEDIATE;
+	}
+
 	return instruction;
 }
 
 void decode_program(program_t program) {
-	instruction_t a;
-	assert(array_size(a.fields) > BITS_END);
+	// instruction_t a;
 
 	program.ip = program.instructions;
 

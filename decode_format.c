@@ -9,33 +9,41 @@
 #include "8086def.h"
 
 #define INSTRUCTION(name, fields, ...) {#name, fields, __VA_ARGS__},
-#define BITS(bits) {BITS_LITERAL, sizeof(#bits)-1, 0b##bits}
-#define D {BITS_D, 1}
-#define W {BITS_W, 1}
-#define MOD {BITS_MOD, 2}
-#define REG {BITS_REG, 3}
-#define RM {BITS_RM, 3}
-#define SR {BITS_SR, 2}
+#define BITS(bits) {FIELD_LITERAL, sizeof(#bits)-1, 0b##bits}
+#define D {FIELD_D, 1}
+#define W {FIELD_W, 1}
+#define MOD {FIELD_MOD, 2}
+#define REG {FIELD_REG, 3}
+#define RM {FIELD_RM, 3}
+#define SR {FIELD_SR, 2}
 
-#define DATA {BITS_DATA, 8}
-#define WDATA {BITS_WDATA, 8}
-#define DISP8 {BITS_DISP8, 8}
-#define DISP16 {BITS_DISP16, 16}
+#define DATA {FIELD_DATA, 0, 1}
+#define DATA_IF_W {FIELD_DATA_IF_W, 0, 1}
+// #define DISP8 {FIELD_DISP8, 8}
+// #define DISP16 {FIELD_DISP16, 16}
 
-#define DEFAULT_D(d) {BITS_D, 0, d}
-#define DEFAULT_W(w) {BITS_W, 0, w}
-#define DEFAULT_MOD(mod) {BITS_MOD, 0, mod}
-#define DEFAULT_REG(reg) {BITS_REG, 0, reg}
-#define DEFAULT_RM(rm) {BITS_RM, 0, rm}
+#define DEFAULT_D(d) {FIELD_D, 0, d}
+#define DEFAULT_W(w) {FIELD_W, 0, w}
+#define DEFAULT_MOD(mod) {FIELD_MOD, 0, mod}
+#define DEFAULT_REG(reg) {FIELD_REG, 0, reg}
+#define DEFAULT_RM(rm) {FIELD_RM, 0, rm}
+
+#define IM {FIELD_IM, 0, 1}
 
 instruction_format_t instruction_formats[] = {
+	// Register/memory to/from register
 	INSTRUCTION(mov, {BITS(100010), D, W, MOD, REG, RM})
-	INSTRUCTION(mov, {BITS(1100011), W, MOD, BITS(000), RM, DATA, WDATA, DEFAULT_D(0)})
-	INSTRUCTION(mov, {BITS(1011), W, REG, DATA, WDATA, DEFAULT_D(1)})
-
+	// Immediate to register/memory
+	INSTRUCTION(mov, {BITS(1100011), W, MOD, BITS(000), RM, DATA, DATA_IF_W, DEFAULT_D(0)})
+	// Immediate to register
+	INSTRUCTION(mov, {BITS(1011), W, REG, DATA, DATA_IF_W, DEFAULT_D(1)})
+	// Memory to accumulator
 	INSTRUCTION(mov, {BITS(1010000), W, DEFAULT_MOD(0), DEFAULT_REG(0), DEFAULT_RM(110), DEFAULT_D(1)})
+	// Accumulator to memory 
 	INSTRUCTION(mov, {BITS(1010001), W, DEFAULT_MOD(0), DEFAULT_REG(0), DEFAULT_RM(110), DEFAULT_D(0)})
-	INSTRUCTION(mov, {BITS(10001110), MOD, BITS(0), SR, RM, DISP16, DEFAULT_D(1), DEFAULT_W(1)})
-	INSTRUCTION(mov, {BITS(10001100), MOD, BITS(0), SR, RM, DISP16, DEFAULT_D(0), DEFAULT_W(1)})
+	// Register/memory to segment register
+	INSTRUCTION(mov, {BITS(10001110), MOD, BITS(0), SR, RM, DEFAULT_D(1), DEFAULT_W(1)})
+	// Segment register to register/memory
+	INSTRUCTION(mov, {BITS(10001100), MOD, BITS(0), SR, RM, DEFAULT_D(0), DEFAULT_W(1)})
 };
 int instruction_format_count = array_size(instruction_formats);

@@ -9,20 +9,22 @@
 #include <core/core.h>
 
 typedef enum {
-	BITS_NULL,
-	BITS_LITERAL,
-	BITS_D,
-	BITS_W,
-	BITS_MOD,
-	BITS_REG,
-	BITS_RM,
-	BITS_SR,
-	BITS_DISP8,
-	BITS_DISP16,
-	BITS_DATA,
-	BITS_WDATA,
+	FIELD_NULL,
+	FIELD_LITERAL,
+	FIELD_D,
+	FIELD_W,
+	FIELD_MOD,
+	FIELD_REG,
+	FIELD_RM,
+	FIELD_SR,
+	FIELD_DISP8,
+	FIELD_DISP16,
+	FIELD_DATA,
+	FIELD_DATA_IF_W,
 
-	BITS_END,
+	FIELD_IM,
+
+	FIELD_COUNT,
 } /*__attribute__ ((__packed__))*/ instruction_field_type_t;
 
 typedef struct {
@@ -37,8 +39,22 @@ typedef struct {
 } instruction_format_t;
 
 typedef struct {
+	enum {
+		OPERAND_REGISTER,
+		OPERAND_MEMORY,
+		OPERAND_DIRECT_ADDRESS,
+		OPERAND_IMMEDIATE,
+	} type;
+	u8 reg;
+	u16 disp;
+	u16 data;
+} operand_t;
+
+typedef struct {
 	u16 size;
-	u16 fields[16];
+	// u16 fields[16];
+	operand_t operands[2];
+	b32 wide;
 } instruction_t;
 
 typedef struct {
