@@ -13,8 +13,9 @@ extern int instruction_format_count;
 
 instruction_t decode_instruction(u8* ip) {
 	instruction_t instruction = {0};
-	u16 fields[16];
-	assert(array_size(fields) > FIELD_COUNT);
+	u16 fields[FIELD_COUNT];
+	u32 field_mask = 0;
+	// assert(array_size(fields) > FIELD_COUNT);
 
 	FOR (format_index, instruction_format_count) {
 		instruction_format_t* format = instruction_formats + format_index;
@@ -62,6 +63,7 @@ instruction_t decode_instruction(u8* ip) {
 				} else {
 					fields[field.type] = value;
 				}
+				field_mask |= (1 << field.type);
 			}
 
 			if (next) {
@@ -73,32 +75,40 @@ instruction_t decode_instruction(u8* ip) {
 	}
 
 done:
+	u32 mod_mask = (1 << FIELD_MOD);
+
 	instruction.wide = fields[FIELD_W];
 
 	operand_t* reg = &instruction.operands[1 - fields[FIELD_D]];
 	operand_t* rm = &instruction.operands[fields[FIELD_D]];
 	operand_t* im = &instruction.operands[1];
-
 	reg->reg = fields[FIELD_REG];
 	rm->reg = fields[FIELD_RM];
 
-	if (fields[FIELD_MOD] == 0 && fields[FIELD_RM] == 0b110) {
-		// Direct address
-		rm->disp = *(u16*)(ip+instruction.size);
-		instruction.size += 2;
-		rm->type = OPERAND_DIRECT_ADDRESS;
-	}
-
-	if (fields[FIELD_MOD] == 0b01) {
-		rm->disp = *(ip+instruction.size);
-		instruction.size += 1;
+	if (field_mask & mod_mask) {
 		rm->type = OPERAND_MEMORY;
-	}
 
-	if (fields[FIELD_MOD] == 0b10) {
-		rm->disp = *(u16*)(ip+instruction.size);
-		instruction.size += 2;
-		rm->type = OPERAND_MEMORY;
+		if (fields[FIELD_MOD] == 0 && fields[FIELD_RM] == 0b110) {
+			// Direct address
+			rm->disp = *(u16*)(ip+instruction.size);
+			instruction.size += 2;
+			rm->type = OPERAND_DIRECT_ADDRESS;
+		}
+
+		if (fields[FIELD_MOD] == 0b01) {
+			rm->disp = *(ip+instruction.size);
+			instruction.size += 1;
+			
+		}
+
+		if (fields[FIELD_MOD] == 0b10) {
+			rm->disp = *(u16*)(ip+instruction.size);
+			instruction.size += 2;
+		}
+
+		if (fields[FIELD_MOD] == 0b11) {
+			rm->type = OPERAND_REGISTER;
+		}
 	}
 
 	if (fields[FIELD_DATA]) {

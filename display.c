@@ -142,7 +142,11 @@ void display_operand(instruction_t inst, operand_t operand) {
         core_print_inline("[%hu]", operand.disp);
         break;
     case OPERAND_IMMEDIATE:
-        core_print_inline("%hu", operand.data);
+        if (inst.wide) {
+            core_print_inline("%hi", operand.data);
+        } else {
+            core_print_inline("%hhi", operand.data8.low);
+        }
         break;
     }
 }

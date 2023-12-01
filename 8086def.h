@@ -39,7 +39,7 @@ typedef struct {
 } instruction_format_t;
 
 typedef struct {
-	enum {
+	enum : u8 {
 		OPERAND_REGISTER,
 		OPERAND_MEMORY,
 		OPERAND_DIRECT_ADDRESS,
@@ -47,7 +47,13 @@ typedef struct {
 	} type;
 	u8 reg;
 	u16 disp;
-	u16 data;
+	union {
+		u16 data;
+		struct {
+			u8 low;
+			u8 high;
+		} data8;
+	};
 } operand_t;
 
 typedef struct {

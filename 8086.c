@@ -571,8 +571,11 @@ int main() {
 	// core_print("\nmany movs");
 	// decode_program(many);
 
-	core_print("\nmore movs");
-	decode_program(lesson2part1);
+	// core_print("\nmore movs");
+	// decode_program(lesson2part1);
+
+	core_print("\nchallenge movs");
+	decode_program(lesson2part2);
 
 	int x = 0;
 }
