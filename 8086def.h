@@ -39,14 +39,15 @@ typedef struct {
 } instruction_format_t;
 
 typedef struct {
-	enum : u8 {
+	// enum : u8 {
+	enum {
 		OPERAND_REGISTER,
 		OPERAND_MEMORY,
 		OPERAND_DIRECT_ADDRESS,
 		OPERAND_IMMEDIATE,
 	} type;
 	u8 reg;
-	u16 disp;
+	i16 disp;
 	union {
 		u16 data;
 		struct {

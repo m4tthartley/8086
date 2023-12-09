@@ -38,9 +38,9 @@ instruction_format_t instruction_formats[] = {
 	// Immediate to register
 	INSTRUCTION(mov, {BITS(1011), W, REG, DATA, DATA_IF_W, DEFAULT_D(1)})
 	// Memory to accumulator
-	INSTRUCTION(mov, {BITS(1010000), W, DEFAULT_MOD(0), DEFAULT_REG(0), DEFAULT_RM(110), DEFAULT_D(1)})
+	INSTRUCTION(mov, {BITS(1010000), W, DEFAULT_MOD(0), DEFAULT_REG(0), DEFAULT_RM(0b110), DEFAULT_D(1)})
 	// Accumulator to memory 
-	INSTRUCTION(mov, {BITS(1010001), W, DEFAULT_MOD(0), DEFAULT_REG(0), DEFAULT_RM(110), DEFAULT_D(0)})
+	INSTRUCTION(mov, {BITS(1010001), W, DEFAULT_MOD(0), DEFAULT_REG(0), DEFAULT_RM(0b110), DEFAULT_D(0)})
 	// Register/memory to segment register
 	INSTRUCTION(mov, {BITS(10001110), MOD, BITS(0), SR, RM, DEFAULT_D(1), DEFAULT_W(1)})
 	// Segment register to register/memory

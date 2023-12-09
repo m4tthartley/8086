@@ -17,10 +17,13 @@ instruction_t decode_instruction(u8* ip) {
 	u32 field_mask = 0;
 	// assert(array_size(fields) > FIELD_COUNT);
 
-	FOR (format_index, instruction_format_count) {
+	int format_index = -1;
+next_format:
+	++format_index;
+	if (format_index < instruction_format_count) {
 		instruction_format_t* format = instruction_formats + format_index;
 		u8 bit_index = 0;
-		FOR (field_index, array_size(format->fields)) {
+		for (int field_index=0; field_index<array_size(format->fields); ++field_index) {
 			instruction_field_t field = format->fields[field_index];
 			u8 byte_offset = bit_index / 8;
 			u8 bit_offset = bit_index % 8;
@@ -29,16 +32,13 @@ instruction_t decode_instruction(u8* ip) {
 			FOR (i, field.size) mask |= (0b1<<(7-(bit_offset+i)));
 			u8 value = (ip[byte_offset] & mask) >> (8-(bit_offset+field.size));
 
-			b32 next = FALSE;
+			// b32 next_format = FALSE;
 			switch (field.type) {
 			case FIELD_NULL:
 				// we reached the end
 				// return instruction
 				// core_print("format %i", format_index);
-				assert(bit_index % 8 == 0);
-				// instruction.size = round_up(byte_offset, )
-				instruction.size = bit_index/8;
-				goto done;
+				goto use_format;
 				break;
 
 			case FIELD_LITERAL:
@@ -48,7 +48,8 @@ instruction_t decode_instruction(u8* ip) {
 				// }
 				
 				if (value != field.value) {
-					next = TRUE;
+					// next_format = TRUE;
+					goto next_format;
 				}
 				break;
 
@@ -66,14 +67,21 @@ instruction_t decode_instruction(u8* ip) {
 				field_mask |= (1 << field.type);
 			}
 
-			if (next) {
-				break;
-			}
+			// if (next_format) {
+			// 	break;
+			// }
 
 			bit_index += field.size;
 		}
+
+use_format:
+		assert(bit_index % 8 == 0);
+		instruction.size = bit_index/8;
+		goto done;
+		// break;
 	}
 
+	assert(FALSE);
 done:
 	u32 mod_mask = (1 << FIELD_MOD);
 
@@ -96,13 +104,12 @@ done:
 		}
 
 		if (fields[FIELD_MOD] == 0b01) {
-			rm->disp = *(ip+instruction.size);
+			rm->disp = *(i8*)(ip+instruction.size);
 			instruction.size += 1;
-			
 		}
 
 		if (fields[FIELD_MOD] == 0b10) {
-			rm->disp = *(u16*)(ip+instruction.size);
+			rm->disp = *(i16*)(ip+instruction.size);
 			instruction.size += 2;
 		}
 
@@ -113,10 +120,10 @@ done:
 
 	if (fields[FIELD_DATA]) {
 		// Immediate
-		im->data = ip[instruction.size];
+		im->data = *(i8*)(ip+instruction.size);
 		++instruction.size;
 		if(fields[FIELD_DATA_IF_W]) {
-			im->data |= ((u16)ip[instruction.size] << 8);
+			im->data |= ((i16)*(i8*)(ip+instruction.size) << 8);
 			++instruction.size;
 		}
 		im->type = OPERAND_IMMEDIATE;

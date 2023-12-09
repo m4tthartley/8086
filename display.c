@@ -134,7 +134,11 @@ void display_operand(instruction_t inst, operand_t operand) {
         core_print_inline("[");
         core_print_inline(effective_address_strings[operand.reg]);
         if (operand.disp) {
-            core_print_inline(" + %hi", operand.disp);
+            if (operand.disp < 0) {
+                core_print_inline(" - %hi", operand.disp * -1);
+            } else {
+                core_print_inline(" + %hi", operand.disp);
+            }
         }
         core_print_inline("]");
         break;
